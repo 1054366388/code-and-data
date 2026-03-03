@@ -1,16 +1,18 @@
 import pandas as pd
+import numpy as np
 import os
+from sklearn.model_selection import train_test_split
 from .config import cfg
 
 
 class DataLoader:
     """
-    Handles ingestion of heterogeneous OMICS data formats (.xlsx).
+    Handles ingestion and processing of heterogeneous OMICS data formats (.xlsx).
     """
 
     def load_cohort(self, cohort_name):
         """
-        Loads aligned expression data and labels.
+        Loads aligned expression data and labels, and splits them into training and testing sets.
         """
         cohort_dir = os.path.join(cfg.DATA_ROOT, cohort_name)
 
@@ -24,7 +26,7 @@ class DataLoader:
         # 2. Load Expression Data
         # File: samples_protein.xlsx (Rows=Proteins, Cols=Samples)
         data_path = os.path.join(cohort_dir, "samples_protein.xlsx")
-        # header=None is critical as per user description
+        # header=None is required for the raw format
         raw_data = pd.read_excel(data_path, header=None)
 
         # Transpose: Convert [Proteins x Samples] -> [Samples x Proteins]
@@ -48,12 +50,19 @@ class DataLoader:
 
         # Ensure label length matches sample length
         min_len = min(len(expression_df), len(labels_df))
-        return expression_df.iloc[:min_len], labels_df.iloc[:min_len]
+        expression_df = expression_df.iloc[:min_len]
+        labels_df = labels_df.iloc[:min_len]
+        
+        # Split data into training and testing sets
+        X_train, X_test, y_train, y_test = train_test_split(
+            expression_df, labels_df, test_size=0.2, random_state=cfg.RANDOM_SEED, stratify=labels_df
+        )
+
+        return X_train, X_test, y_train, y_test
 
     def load_knowledge_graph(self):
-        """Loads the PTM adjacency matrix."""
+        """Loads the interactions adjacency matrix."""
         if os.path.exists(cfg.KG_PATH):
-            # Assumes S.xlsx is an adjacency matrix
             return pd.read_excel(cfg.KG_PATH, index_col=0, header=None)
         else:
             print(f"[Warning] Knowledge Graph not found at {cfg.KG_PATH}")

@@ -1,125 +1,102 @@
-Prot-STAR: Neuro-Symbolic Omics Framework
+# 🌟 Prot-STAR: Framework for Omics Data Analysis
 
-This repository contains the official PyTorch implementation of Prot-STAR.
+> A robust, end-to-end Machine Learning pipeline designed specifically for advanced omics data analysis.
 
-Prot-STAR is a neuro-symbolic framework designed for omics data analysis. It integrates Structure-Grounded Pruning (utilizing Knowledge Graphs) with Adaptive Semantic Quantization to transform continuous proteomic data into semantic prompts for Large Language Model (LLM) instruction tuning.
+Prot-STAR is a powerful framework that intelligently integrates **Knowledge Graphs** with **Adaptive Semantic Quantization** to transform continuous proteomic data into structured semantic prompts, perfectly suited for Large Language Model (LLM) instruction tuning and robust downstream classification.
 
-📂 Repository Structure
+## 📂 Repository Structure
 
-.
-├── main.py                   # Entry point for the pipeline
-├── src/
-│   ├── config.py             # Hyperparameters and path configurations
-│   ├── core_modules.py       # Core logic: Pruning (Eq.4), Quantization (Eq.2-3), Prompting (Eq.5)
-│   ├── data_loader.py        # Data ingestion for heterogeneous omics formats
-│   └── model_engine.py       # LLM initialization and LoRA training engine
-└── requirements.txt          # Python dependencies
+```text
+📦 Prot-STAR
+ ┣ 📜 main.py                # Entry point for the full execution pipeline
+ ┣ 📂 src                    # Core module components
+ ┃ ┣ 📜 config.py            # Global configurations, random seed & Optuna hyperparameter space
+ ┃ ┣ 📜 core_modules.py      # Abstracted operations: Feature Pruning, Quantization, Prompt generation
+ ┃ ┣ 📜 data_loader.py       # Data ingestion, processing, and Train/Test splits
+ ┃ ┗ 📜 model_engine.py      # LoRA integration, training loops, and LLM initialization
+ ┗ 📜 requirements.txt       # Python package dependencies
+```
 
+## 🛠️ Installation
 
-🛠️ Installation
-
-Clone the repository:
-
-git clone <anonymous_link>
+**1. Clone the repository:**
+```bash
+git clone <repository_url>
 cd Prot-STAR
+```
 
-
-Create a virtual environment (Recommended):
-
-conda create -n protstar python=3.10
+**2. Create a virtual environment** *(Highly Recommended)*:
+```bash
+conda create -n protstar python=3.10 -y
 conda activate protstar
+```
 
+**3. Install dependencies:**
+```bash
+pip install torch transformers peft datasets pandas openpyxl scikit-learn optuna
+```
 
-Install dependencies:
+## 📊 Data Preparation
 
-pip install torch transformers peft datasets pandas openpyxl scikit-learn
+To successfully run the framework, structure your data directory exactly as follows within the project root. The system expects these heterogeneous Excel formats:
 
-
-(Note: Ensure you have a version of PyTorch compatible with your CUDA version).
-
-📊 Data Preparation
-
-To reproduce the experiments, organize your data in the following structure within the project root. The framework expects heterogeneous Excel files as described below.
-
+```text
 data/
-├── knowledge_graph/
-│   └── S.xlsx                # Adjacency matrix for the Knowledge Graph (Proteins/Genes)
-└── COADREAD/                 # Cohort Data Example
-    ├── feature_name.xlsx     # List of protein/gene names (Header: Row 1)
-    ├── samples_protein.xlsx  # Expression matrix (Rows=Proteins, Cols=Samples)
-    └── lables.xlsx           # Classification targets (e.g., Subtypes)
+ ┣ 📂 knowledge_graph/
+ ┃ ┗ 📊 S.xlsx                # Adjacency Matrix (Interactions across Proteins/Genes)
+ ┗ 📂 COADREAD/               # Example Cohort Data Directory
+   ┣ 📄 feature_name.xlsx     # Protein/Gene names (Header must be on Row 1)
+   ┣ 📄 samples_protein.xlsx  # Raw Continuous Expression Matrix (Rows=Proteins, Cols=Samples)
+   ┗ 📄 lables.xlsx           # Target Classification Labels (e.g., Subtypes)
+```
 
+> **Warning**  
+> - **`feature_name.xlsx`**: Include headers in row 1; data starts in row 2.
+> - **`samples_protein.xlsx`**: Must not contain any headers.
+> - **`lables.xlsx`**: Must not contain any headers.
 
-IMPORTANT: > - feature_name.xlsx: Header is in row 1, data starts in row 2.
+## 🚀 Pipeline Usage
 
-samples_protein.xlsx: Raw expression data with no header.
+### ⚙️ Step 1: Configuration Validation
 
-lables.xlsx: Target labels with no header.
+Validate the paths and hyperparameter search spaces in `src/config.py`. Update the `BASE_DIR` parameter to strictly point to your local working directory.
 
-🚀 Usage
+### ▶️ Step 2: Execution
 
-1. Configuration
+Launch the overarching execution pipeline. This autonomously triggers **Data Loading & Splitting $\rightarrow$ Knowledge Graph Pruning $\rightarrow$ Value Quantization $\rightarrow$ Semantic Prompt Construction $\rightarrow$ Parameter tuning using Optuna $\rightarrow$ Model Training**:
 
-Before running, ensure src/config.py uses relative paths or points to your data directory.
-
-Anonymity Note: Please ensure absolute paths containing user names (e.g., C:\Users\Name\...) are removed from src/config.py before submission.
-
-2. Run the Pipeline
-
-Execute the main script to start the full workflow (Data Loading -> Pruning -> Quantization -> Prompt Construction -> Training).
-
+```bash
 python main.py
+```
 
+## 🧠 Workflow Components & Core Mechanisms
 
-3. Workflow Description
+1. **Structure-Grounded Pruning (`core.structure_grounded_pruning`)**  
+   Intelligently filters out noisy signals to select highly informative features using a harmonic balance between numerical data variance and structural connectivity derived from the Knowledge Graph (`S.xlsx`).
 
-The main.py script executes the following phases corresponding to the paper's methodology:
+2. **Adaptive Semantic Quantization (`core.adaptive_semantic_quantization`)**  
+   Elegantly maps continuous numerical values into standardized categorical tokens (e.g., `"High"`, `"Low"`) using Non-parametric Empirical Cumulative Distribution Functions.
 
-Structure-Grounded Pruning (Eq. 4): Selects informative features using the Knowledge Graph (S.xlsx) and data variance.
+3. **Instruction Dataset Tuning & Hyperparameter Optimization (`engine.run_training`)**  
+   Dynamically wraps the LLM training engine in an **Optuna** parameter search to iteratively determine the minimum convergence loss and optimally fine-tune using **LoRA** (Low-Rank Adaptation).
 
-Code: core.structure_grounded_pruning(X)
+## ⚠️ Notes on LLM Execution & Hardware
 
-Adaptive Semantic Quantization (Eq. 2 & 3): Converts continuous expression values into semantic tokens (e.g., "High", "Low") using Empirical Cumulative Distribution Functions (ECDF).
+This framework is natively configured to deploy `meta-llama/Meta-Llama-3-8B-Instruct`. 
 
-Code: core.adaptive_semantic_quantization(X_selected)
+- **Access Constraints**: Users **must** authenticate via the HuggingFace CLI to download the weights:
+  ```bash
+  huggingface-cli login
+  ```
+- **Hardware Prerequisites**: 
+  - A CUDA-enabled GPU packing a minimum of **16GB VRAM** is recommended for default LoRA configurations.
+  - For hardware-constrained environments, modify the Optuna `batch_size` bounds dynamically within `src/config.py`.
 
-Instruction Tuning (Eq. 5): Constructs clinical prompts and fine-tunes the Llama-3-8B model using LoRA (Low-Rank Adaptation).
+## ⚙️ Technical Requirements
+- Python $\geq$ 3.8
+- PyTorch $\geq$ 2.0
+- `transformers`, `peft`, `datasets`, `optuna`
+- `pandas`, `numpy`, `scikit-learn`, `openpyxl`, `accelerate`
 
-Code: engine.run_training(prompts)
-
-⚠️ Notes on LLM Access & Hardware
-
-This framework is configured to use meta-llama/Meta-Llama-3-8B-Instruct.
-
-HuggingFace Login: You must accept the Llama-3 license on HuggingFace and log in via CLI:
-
-huggingface-cli login
-
-
-Hardware:
-
-A GPU with at least 16GB VRAM is recommended for training with the specified LoRA configuration.
-
-If running on CPU or smaller GPUs, consider reducing BATCH_SIZE in src/config.py.
-
-⚙️ Requirements
-
-Python >= 3.8
-
-PyTorch >= 2.0
-
-pandas
-
-numpy
-
-transformers
-
-peft
-
-datasets
-
-openpyxl
-
-scikit-learn
-
-accelerate
+---
+*Built tightly for computational efficiency and modular resilience.*

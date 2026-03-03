@@ -5,12 +5,12 @@ from .config import cfg
 
 class ProtStarCore:
     """
-    Implements the neuro-symbolic methodology described in the paper.
+    Core operations for the Prot-STAR framework, handling feature pruning and expression quantization.
     """
 
     def __init__(self, kg_matrix=None):
         self.kg_matrix = kg_matrix
-        # Semantic mapping thresholds (Eq. 3)
+        # Semantic mapping thresholds
         self.bin_map = {
             (0.00, 0.10): "Very Low",
             (0.10, 0.35): "Low",
@@ -21,7 +21,7 @@ class ProtStarCore:
 
     def structure_grounded_pruning(self, df):
         """
-        Selects Top-K features using Structure-Grounded Abduction (Eq. 4).
+        Selects Top-K features based on a balanced scoring of numerical variance and graph centrality.
         Score = lambda * Norm(Std) + (1-lambda) * Norm(Centrality)
         """
         # 1. Data Deviation (Sigma)
@@ -40,7 +40,7 @@ class ProtStarCore:
             for gene in df.columns:
                 c_val = centrality.get(gene, 0) / max_cen
                 d_val = norm_std.get(gene, 0)
-                # Eq. 4 Fusion
+                # Combine scores
                 scores[gene] = (cfg.LAMBDA_VAL * d_val) + ((1 - cfg.LAMBDA_VAL) * c_val)
         else:
             # Fallback to pure variance if KG is missing
@@ -52,15 +52,15 @@ class ProtStarCore:
 
     def adaptive_semantic_quantization(self, df):
         """
-        Converts continuous floats to semantic tokens via ECDF (Eq. 2 & 3).
+        Converts continuous float expressions to semantic categorical tokens using empirical distributions.
         """
         quantized_df = pd.DataFrame(index=df.index, columns=df.columns)
 
         for col in df.columns:
-            # Eq. 2: Empirical Cumulative Distribution Function
+            # Rank values to percentiles
             ranks = df[col].rank(pct=True)
 
-            # Eq. 3: Mapping
+            # Mapping logic
             def get_token(r):
                 for (low, high), token in self.bin_map.items():
                     if low < r <= high:
@@ -73,12 +73,12 @@ class ProtStarCore:
 
     def construct_prompt(self, feature_series, label=None):
         """
-        Constructs the instruction prompt T(x) (Eq. 5).
+        Constructs a structured text instruction prompt for the Language Model based on the quantized profile.
         """
         # Serialize: "EGFR: High, PTEN: Low"
         profile = ", ".join([f"{k}: {v}" for k, v in feature_series.items()])
 
-        # Prompt Template [Figure 3]
+        # Instructional Prompt Template
         prompt = (
             f"Below is an instruction that describes a task. Write a response that appropriately completes the request.\n\n"
             f"### Instruction:\n"
