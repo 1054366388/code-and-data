@@ -1,0 +1,6 @@
+__pycache__/
+*.pyc
+model_checkpoints/
+results/
+*.log
+.env
